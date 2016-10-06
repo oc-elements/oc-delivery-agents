@@ -3,7 +3,13 @@
   "description": "Element to manage delivery agents on the Ordercloud platform",
   "main": "oc-delivery-list-agents",
   "dependencies": {
-    "polymer": "Polymer/polymer#^1.4.0"
+    "polymer": "Polymer/polymer#^1.4.0",
+    "oc-delivery-agent-api": "git://github.com/oc-elements/oc-delivery-agent-api#1.x",
+    "iron-data-table": "1.0.0",
+    "oc-iron-data-table-styles": "git://github.com/oc-elements/oc-iron-data-table-styles.git#1.x",
+    "oc-paginator": "git://github.com/oc-elements/oc-paginator.git#1.x",
+    "oc-grid-controls": "git://github.com/oc-elements/oc-grid-controls#1.x"
+
   },
   "devDependencies": {
     "iron-component-page": "PolymerElements/iron-component-page#^1.0.0",
