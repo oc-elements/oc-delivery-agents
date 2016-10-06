@@ -1,10 +1,17 @@
 <link rel="import" href="../polymer/polymer.html">
 
+<link rel="import" href="../oc-delivery-agent-api/oc-delivery-agent-api.html">
+<link rel="import" href="../iron-data-table/iron-data-table.html">
+<link rel="import" href="../oc-grid-controls/oc-grid-controls.html">
+<link rel="import" href="../oc-iron-data-table-styles/oc-iron-data-table-styles.html">
+<link rel="import" href="../oc-paginator/mercury-paginator.html">
+<link rel="import" href="../paper-icon-button/paper-icon-button.html">
+
 <!--
 `oc-delivery-list-agents`
 Element to manage delivery agents on the Ordercloud platform
 
-@demo demo/index.html 
+@demo demo/index.html
 -->
 
 <dom-module id="oc-delivery-list-agents">
@@ -13,8 +20,41 @@ Element to manage delivery agents on the Ordercloud platform
       :host {
         display: block;
       }
+
     </style>
-    <h2>Hello [[prop1]]</h2>
+
+    <oc-delivery-agent-api id="deliveryApi"></oc-delivery-agent-api>
+
+    <oc-grid-controls data="[[ _items ]]" total-count="[[ _totalItems ]]" num-entries="[[ _pageSize ]]">
+      <iron-data-table
+              id="dataTable"
+              current-page="[[ _currentPage ]]"
+              loading="{{ loading }}">
+        <data-table-column name="Name" sort-by="name">
+          <template>[[item.name]]</template>
+        </data-table-column>
+        <data-table-column name="Number" sort-by="Number">
+          <template>[[item.price]]</template>
+        </data-table-column>
+        <data-table-column name="min/max Float" sort-by="float">
+          <template>[[item.price]]</template>
+        </data-table-column>
+        <data-table-column name="Agent Balance" sort-by="agentBalance">
+          <template>[[item.price]]</template>
+        </data-table-column>
+        <data-table-column name="Active" sort-by="active">
+          <template>[[item.price]]</template>
+        </data-table-column>
+        <data-table-column name="Actions">
+          <template>
+            <div data-option-object$="[[ item ]]" >
+              <paper-icon-button id="edit" icon="create" title="Edit Product"  on-tap="_actionHandler"></paper-icon-button>
+            </div>
+          </template>
+        </data-table-column>
+      </iron-data-table>
+    </oc-grid-controls>
+
   </template>
 
   <script>
@@ -32,7 +72,13 @@ Element to manage delivery agents on the Ordercloud platform
 
       refresh : function(){
 
-      }
+      },
+
+      _actionHandler: function(e) {
+        var extraObj = JSON.parse(Polymer.dom(event).localTarget.parentElement.getAttribute('data-option-object')),
+                action = e.target.getAttribute('id');
+        this.fire(action, extraObj);
+      },
 
     });
   </script>
