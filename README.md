@@ -1,4 +1,4 @@
-# \<oc-delivery-agents\>
+# \<oc-delivery-list-agents\>
 
 Element to manage delivery agents on the Ordercloud platform
 

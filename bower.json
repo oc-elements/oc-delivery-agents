@@ -1,7 +1,7 @@
 {
-  "name": "oc-delivery-agents",
+  "name": "oc-delivery-list-agents",
   "description": "Element to manage delivery agents on the Ordercloud platform",
-  "main": "oc-delivery-agents.html",
+  "main": "oc-delivery-list-agents",
   "dependencies": {
     "polymer": "Polymer/polymer#^1.4.0"
   },
