@@ -6,6 +6,12 @@
 <link rel="import" href="../oc-iron-data-table-styles/oc-iron-data-table-styles.html">
 <link rel="import" href="../oc-paginator/mercury-paginator.html">
 <link rel="import" href="../paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../paper-dropdown-menu/paper-dropdown-menu.html">
+<link rel="import" href="../paper-item/paper-item.html">
+<link rel="import" href="../paper-listbox/paper-listbox.html">
+<link rel="import" href="../paper-button/paper-button.html">
+<link rel="import" href="../paper-dialog/paper-dialog.html">
+<link rel="import" href="../oc-core-utils/oc-api-consumer-behaviour.html">
 
 <!--
 `oc-delivery-list-agents`
@@ -17,43 +23,82 @@ Element to manage delivery agents on the Ordercloud platform
 <dom-module id="oc-delivery-list-agents">
   <template>
     <style>
+
+
+      data-table-row data-table-cell:last-of-type {
+        flex: 1 0 400px !important;
+      }
+
+      data-table-cell:last-of-type paper-button {
+        padding: 5px 7px;
+        font-size: 13px;
+      }
+
+      paper-item {
+        background: #fff;
+      }
+
       :host {
         display: block;
+
       }
 
     </style>
 
     <oc-delivery-agent-api id="deliveryApi"></oc-delivery-agent-api>
 
-    <oc-grid-controls data="[[ _items ]]" total-count="[[ _totalItems ]]" num-entries="[[ _pageSize ]]">
+    <oc-grid-controls data="[[ _deliveryAgents ]]" total-count="[[ _totalItems ]]" num-entries="[[ _pageSize ]]">
       <iron-data-table
               id="dataTable"
               current-page="[[ _currentPage ]]"
               loading="{{ loading }}">
         <data-table-column name="Name" sort-by="name">
-          <template>[[item.name]]</template>
+          <template>[[item.user.profile.firstName]] [[item.user.profile.surname]]</template>
         </data-table-column>
         <data-table-column name="Number" sort-by="Number">
-          <template>[[item.price]]</template>
+          <template>[[item.user.profile.cellphoneNumber]]</template>
         </data-table-column>
         <data-table-column name="min/max Float" sort-by="float">
-          <template>[[item.price]]</template>
+          <template>[[_computeFloat(item.minBalance, item.maxBalance)]]</template>
         </data-table-column>
         <data-table-column name="Agent Balance" sort-by="agentBalance">
-          <template>[[item.price]]</template>
+          <template>[[_computeBalance(item.balance)]]</template>
         </data-table-column>
         <data-table-column name="Active" sort-by="active">
-          <template>[[item.price]]</template>
+          <template>
+            <paper-dropdown-menu >
+              <paper-listbox class="dropdown-content" selected="{{item.status.id}}" attr-for-selected="status-id" on-tap="_statusChanged">
+                <template is="dom-repeat" items="{{_deliveryAgentStatuses}}">
+                  <paper-item status-id="{{item.id}}">[[item.status]]</paper-item>
+                </template>
+              </paper-listbox>
+            </paper-dropdown-menu>
+          </template>
         </data-table-column>
         <data-table-column name="Actions">
           <template>
-            <div data-option-object$="[[ item ]]" >
-              <paper-icon-button id="edit" icon="create" title="Edit Product"  on-tap="_actionHandler"></paper-icon-button>
+            <div data-option-object$="[[ item ]]" class="actions" >
+              <paper-icon-button id="edit" icon="create" title="Edit Product"  on-tap="_editAgent" raised></paper-icon-button>
+              <paper-button id="fraud" title="Fraud"  on-tap="_viewFraud" raised>Fraud</paper-button>
+              <paper-button id="transactions" title="Transactions"  on-tap="_viewTransactions" raised>Transactions</paper-button>
+              <paper-button id="topup" title="Topup"  on-tap="_openTopupModal" raised>Topup</paper-button>
+              <paper-button id="cashup" title="Cashup"  on-tap="_openCashupModal" raised>Cashup</paper-button>
             </div>
           </template>
         </data-table-column>
       </iron-data-table>
     </oc-grid-controls>
+
+    <paper-dialog id="modal" modal>
+      <h2>{{_modalValues.type}} Agent Balance</h2>
+      <paper-input required always-float-label label="Amount" type="number" value="{{_modalAmount}}">
+        <div prefix>R </div>
+      </paper-input>
+      <div class="buttons">
+        <paper-button dialog-dismiss>Cancel</paper-button>
+        <paper-button dialog-confirm autofocus on-tap="_modalAction">{{_modalValues.type}}</paper-button>
+      </div>
+    </paper-dialog>
 
   </template>
 
@@ -61,6 +106,7 @@ Element to manage delivery agents on the Ordercloud platform
     Polymer({
 
       is: 'oc-delivery-list-agents',
+      behaviors: [OC.Behaviours.ApiConsumer],
 
       properties: {
         organisationId: Number,
@@ -70,8 +116,38 @@ Element to manage delivery agents on the Ordercloud platform
         },
       },
 
+      _deliveryAgents : Array,
+      _deliveryAgentStatuses : Array,
+      _totalItems: Number,
+      _pageSize: Number,
+      _currentPage: Number,
+      _modalValues: Object,
+      _modalAmount: Number,
+
+      observers : [
+        'refresh(organisationId)'
+      ],
+
       refresh : function(){
 
+        this._createModal();
+
+        if(!this.organisationId) return;
+
+        Promise.all([this._getStatusses(), this._getAgents()])
+                .then(function(requests){
+
+                  this._deliveryAgents = requests[1].response.results;
+                  this._totalItems = requests[1].response.count;
+                  this._pageSize = 10;
+                  this._currentPage = 1;
+
+                  this._deliveryAgentStatuses = requests[0].response.results;
+                  console.log(this._deliveryAgentStatuses)
+
+                }.bind(this))
+                .catch(this.fire.bind(this, 'delivery-agents-error', 'Failed to load delivery agents'))
+                .finally(this.set.bind(this, 'loading', false));
       },
 
       _actionHandler: function(e) {
@@ -79,6 +155,114 @@ Element to manage delivery agents on the Ordercloud platform
                 action = e.target.getAttribute('id');
         this.fire(action, extraObj);
       },
+
+      _getAgents : function(page, pageSize, statuses) {
+
+        if(!this.organisationId) return;
+
+        return this.$.deliveryApi.getDeliveryAgentsWithBalance()
+
+      },
+
+      _getStatusses : function() {
+
+        if(!this.organisationId) return;
+
+        return this.$.deliveryApi.getAgentStatuses()
+      },
+
+      _computeFloat : function(minBalance, maxBalance){
+
+        if(!minBalance && !maxBalance) return "Not Set";
+
+        var minMaxFloat = "";
+
+        minMaxFloat += (minBalance) ? minBalance  : "Not Set";
+        minMaxFloat += " / ";
+        minMaxFloat += (maxBalance) ? maxBalance  : "Not Set";
+
+        return minMaxFloat;
+
+      },
+
+      _computeBalance : function(balance) {
+        if(typeof balance === "number") {
+          return "R "+ balance.toFixed(2);
+        }
+      },
+
+      _statusChanged : function(e){
+        console.log(e.model.item);
+        console.log(Polymer.dom(event).localTarget);
+      },
+
+      _editAgent : function(e){
+        var agentId = e.model.item.id;
+        this.fire('oc-page-to', '/agent-edit/'+agentId);
+      },
+
+      _viewFraud : function(e){
+        var agentId = e.model.item.id;
+        this.fire('oc-page-to', '/fraud/'+agentId);
+      },
+
+      _viewTransactions : function(e){
+        var agentId = e.model.item.id;
+        this.fire('oc-page-to', '/agent-transactions/'+agentId);
+      },
+
+      _openTopupModal : function(e){
+        this.set('_modalAmount', 0);
+        this.set('_modalValues', {});
+        this.set('_modalValues.agentId', e.model.item.id);
+        this.set('_modalValues.type', 'Topup');
+        this.$.modal.open()
+      },
+
+      _openCashupModal : function(e){
+        this.set('_modalAmount', 0);
+        this.set('_modalValues', {});
+        this.set('_modalValues.agentId', e.model.item.id);
+        this.set('_modalValues.type', 'Cashup');
+        console.log(this._modalValues);
+        this.$.modal.open()
+      },
+
+      _createModal : function(){
+        var body = document.querySelector('body');
+        var modal = body.querySelector('#modal');
+
+        if(!modal){
+          Polymer.dom(body).appendChild(this.$.modal);
+        }
+      },
+
+      _modalAction : function(e){
+
+        if (!this._modalValues && !this._modalAmount) {
+          return;
+        }
+
+        this.loading = true;
+
+        if(this._modalValues.type === "Topup"){
+          this.$.deliveryApi.topup(this.organisationId, this._modalValues.agentId, this._modalAmount)
+                  .then(function(request){
+                    this.refresh();
+                  }.bind(this))
+                  .catch(this.fire.bind(this, 'delivery-agents-error', 'Failed to topup amount'))
+                  .finally(this.set.bind(this, 'loading', false));
+        } else {
+          this.$.deliveryApi.cashup(this.organisationId, this._modalValues.agentId, this._modalAmount)
+                  .then(function(request){
+                    this.refresh();
+                  }.bind(this))
+                  .catch(this.fire.bind(this, 'delivery-agents-error', 'Failed to cashup amount'))
+                  .finally(this.set.bind(this, 'loading', false));
+        }
+
+        this._modalAmount = 0;
+      }
 
     });
   </script>
