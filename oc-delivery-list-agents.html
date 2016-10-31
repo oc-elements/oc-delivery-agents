@@ -11,6 +11,7 @@
 <link rel="import" href="../paper-listbox/paper-listbox.html">
 <link rel="import" href="../paper-button/paper-button.html">
 <link rel="import" href="../paper-dialog/paper-dialog.html">
+<link rel="import" href="../oc-paper-menu-button-in-iron-list/oc-paper-menu-button-in-iron-list.html">
 <link rel="import" href="../oc-core-utils/oc-api-consumer-behaviour.html">
 
 <!--
@@ -66,13 +67,13 @@ Element to manage delivery agents on the Ordercloud platform
         </data-table-column>
         <data-table-column name="Active" sort-by="active">
           <template>
-            <paper-dropdown-menu >
+            <oc-paper-menu-button-in-iron-list >
               <paper-listbox class="dropdown-content" selected="{{item.status.id}}" attr-for-selected="status-id" on-tap="_statusChanged">
                 <template is="dom-repeat" items="{{_deliveryAgentStatuses}}">
                   <paper-item status-id="{{item.id}}">[[item.status]]</paper-item>
                 </template>
               </paper-listbox>
-            </paper-dropdown-menu>
+            </oc-paper-menu-button-in-iron-list>
           </template>
         </data-table-column>
         <data-table-column name="Actions">
