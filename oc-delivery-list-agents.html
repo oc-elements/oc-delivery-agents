@@ -67,13 +67,13 @@ Element to manage delivery agents on the Ordercloud platform
         </data-table-column>
         <data-table-column name="Active" sort-by="active">
           <template>
-            <oc-paper-menu-button-in-iron-list >
-              <paper-listbox class="dropdown-content" selected="{{item.status.id}}" attr-for-selected="status-id" on-tap="_statusChanged">
+            <paper-dropdown-menu >
+              <paper-listbox class="dropdown-content" selected="{{item.status.id}}" attr-for-selected="status-id" on-tap="_statusChanged" style="transform: translate(0px, 0px); z-index: 1;">
                 <template is="dom-repeat" items="{{_deliveryAgentStatuses}}">
                   <paper-item status-id="{{item.id}}">[[item.status]]</paper-item>
                 </template>
               </paper-listbox>
-            </oc-paper-menu-button-in-iron-list>
+            </paper-dropdown-menu>
           </template>
         </data-table-column>
         <data-table-column name="Actions">
